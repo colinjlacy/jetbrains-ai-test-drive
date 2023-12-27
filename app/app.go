@@ -8,7 +8,6 @@ import (
 func Start() {
 	r := gin.Default()
 
-	// THE JBAI PUT THIS HERE, NOT ME
 	registerHealthEndpoint(r)
 
 	r.GET("/", func(c *gin.Context) {
