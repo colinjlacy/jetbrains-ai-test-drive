@@ -55,9 +55,9 @@
 			<div id="nav">
 				<select id="files">
 				
-				<option value="file0">github.com/colinjlacy/jetbrains-ai-test-drive/app/app.go (28.6%)</option>
+				<option value="file0">github.com/colinjlacy/jetbrains-ai-test-drive/app/app.go (25.0%)</option>
 				
-				<option value="file1">github.com/colinjlacy/jetbrains-ai-test-drive/endpoints/user_endpoints..go (87.1%)</option>
+				<option value="file1">github.com/colinjlacy/jetbrains-ai-test-drive/endpoints/user_endpoints..go (100.0%)</option>
 				
 				<option value="file2">github.com/colinjlacy/jetbrains-ai-test-drive/services/users_service.go (100.0%)</option>
 				
@@ -76,6 +76,7 @@
 		<pre class="file" id="file0" style="display: none">package app
 
 import (
+        "github.com/colinjlacy/jetbrains-ai-test-drive/endpoints"
         "github.com/gin-gonic/gin"
         "net/http"
 )
@@ -84,6 +85,7 @@ func Start() <span class="cov0" title="0">{
         r := gin.Default()
 
         registerHealthEndpoint(r)
+        endpoints.RegisterUserEndpoints(r) // &lt;- right here
 
         r.GET("/", func(c *gin.Context) </span><span class="cov0" title="0">{
                 c.JSON(200, gin.H{
@@ -106,10 +108,12 @@ func registerHealthEndpoint(engine *gin.Engine) <span class="cov8" title="1">{
 		<pre class="file" id="file1" style="display: none">package endpoints
 
 import (
+        "fmt"
         "github.com/colinjlacy/jetbrains-ai-test-drive/models"
         "github.com/colinjlacy/jetbrains-ai-test-drive/services"
         "github.com/gin-gonic/gin"
         "net/http"
+        "time"
 )
 
 var (
@@ -119,6 +123,14 @@ var (
         upsertUser     func(user *models.User) error = services.UpsertUser
         deleteUserById func(id string) error         = services.DeleteUserById
 )
+
+func RegisterUserEndpoints(e *gin.Engine) <span class="cov8" title="1">{
+        e.GET("/users", getUsersHandler)
+        e.GET("/users/:user-id", getUserByIdHandler)
+        e.POST("/users", createUserHandler)
+        e.PUT("/users/:user-id", upsertUserHandler)
+        e.DELETE("/users/:user-id", deleteUserHandler)
+}</span>
 
 func getUsersHandler(c *gin.Context) <span class="cov8" title="1">{
         users := getUsers()
@@ -140,7 +152,8 @@ func getUserByIdHandler(c *gin.Context) <span class="cov8" title="1">{
 
 func createUserHandler(c *gin.Context) <span class="cov8" title="1">{
         user := &amp;models.User{}
-        if err := c.Bind(user); err != nil </span><span class="cov0" title="0">{
+        user.Id = fmt.Sprintf("%d", time.Now().UnixNano())
+        if err := c.Bind(user); err != nil </span><span class="cov8" title="1">{
                 c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
                 return
         }</span>
@@ -157,12 +170,12 @@ func upsertUserHandler(context *gin.Context) <span class="cov8" title="1">{
                 if userId, exists := context.Params.Get("user-id"); exists </span><span class="cov8" title="1">{
                         user.Id = userId
                         if err := upsertUser(&amp;user); err == nil </span><span class="cov8" title="1">{
-                                context.JSON(http.StatusOK, gin.H{})
+                                context.JSON(http.StatusOK, gin.H{"data": user})
                         }</span> else<span class="cov8" title="1"> {
                                 context.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
                         }</span>
                 }
-        } else<span class="cov0" title="0"> {
+        } else<span class="cov8" title="1"> {
                 context.JSON(http.StatusBadRequest, gin.H{"error": "Bad Request"})
         }</span>
 }
@@ -174,7 +187,7 @@ func deleteUserHandler(c *gin.Context) <span class="cov8" title="1">{
         if err != nil </span><span class="cov8" title="1">{
                 if err == services.ErrorUserNotFound </span><span class="cov8" title="1">{
                         c.Status(http.StatusNotFound)
-                }</span> else<span class="cov0" title="0"> {
+                }</span> else<span class="cov8" title="1"> {
                         c.Status(http.StatusInternalServerError)
                 }</span>
                 <span class="cov8" title="1">return</span>
