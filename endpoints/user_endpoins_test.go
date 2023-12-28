@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/suite"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 )
 
@@ -164,6 +165,23 @@ func TestCreateUserHandler(t *testing.T) {
 			t.Fatalf("Expected status code %d, got %d", http.StatusCreated, resp.Code)
 		}
 	})
+
+	t.Run("createUser returns error when failing to bind", func(t *testing.T) {
+		router = gin.New()
+		createUser = func(*models.User) error { return nil }
+
+		router.POST("/user", createUserHandler)
+
+		req := httptest.NewRequest(http.MethodPost, "/user", strings.NewReader("test"))
+		req.Header.Set("Content-Type", "application/xml")
+		resp := httptest.NewRecorder()
+
+		router.ServeHTTP(resp, req)
+
+		if resp.Code != http.StatusBadRequest {
+			t.Fatalf("Expected status code %d, got %d", http.StatusBadRequest, resp.Code)
+		}
+	})
 }
 
 type upsertUserHandlerTestSuite struct {
@@ -220,6 +238,15 @@ func (suite *upsertUserHandlerTestSuite) TestupsertUserHandlerError() {
 	upsertUser = oldFunc
 }
 
+func (suite *upsertUserHandlerTestSuite) TestupsertUserHandlerBindingError() {
+	req, _ := http.NewRequest(http.MethodPut, "/user/1", strings.NewReader("test"))
+	suite.ctx.Request = req
+
+	upsertUserHandler(suite.ctx)
+
+	suite.Require().Equal(http.StatusBadRequest, suite.w.Code)
+}
+
 type MockService struct {
 	mock.Mock
 }
@@ -262,5 +289,25 @@ func TestDeleteUserHandler(t *testing.T) {
 	if status := resp.Result().StatusCode; status != http.StatusNotFound {
 		t.Errorf("handler returned wrong status code: got %v want %v",
 			status, http.StatusNotFound)
+	}
+
+	// testing case when user not found
+	deleteUserById = deleteUserByIdMock(errors.New("test error"))
+	req, _ = http.NewRequest(http.MethodDelete, "/user/1", nil)
+	resp = httptest.NewRecorder()
+	router.ServeHTTP(resp, req)
+
+	if status := resp.Result().StatusCode; status != http.StatusInternalServerError {
+		t.Errorf("handler returned wrong status code: got %v want %v",
+			status, http.StatusInternalServerError)
+	}
+}
+
+func TestRegisterUserEndpoints(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	e := gin.New()
+	RegisterUserEndpoints(e)
+	if len(e.Routes()) > 0 == false {
+		t.Errorf("expected gin engine to have registered routes, but found none")
 	}
 }

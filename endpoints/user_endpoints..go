@@ -1,10 +1,12 @@
 package endpoints
 
 import (
+	"fmt"
 	"github.com/colinjlacy/jetbrains-ai-test-drive/models"
 	"github.com/colinjlacy/jetbrains-ai-test-drive/services"
 	"github.com/gin-gonic/gin"
 	"net/http"
+	"time"
 )
 
 var (
@@ -14,6 +16,14 @@ var (
 	upsertUser     func(user *models.User) error = services.UpsertUser
 	deleteUserById func(id string) error         = services.DeleteUserById
 )
+
+func RegisterUserEndpoints(e *gin.Engine) {
+	e.GET("/users", getUsersHandler)
+	e.GET("/users/:user-id", getUserByIdHandler)
+	e.POST("/users", createUserHandler)
+	e.PUT("/users/:user-id", upsertUserHandler)
+	e.DELETE("/users/:user-id", deleteUserHandler)
+}
 
 func getUsersHandler(c *gin.Context) {
 	users := getUsers()
@@ -35,6 +45,7 @@ func getUserByIdHandler(c *gin.Context) {
 
 func createUserHandler(c *gin.Context) {
 	user := &models.User{}
+	user.Id = fmt.Sprintf("%d", time.Now().UnixNano())
 	if err := c.Bind(user); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -52,7 +63,7 @@ func upsertUserHandler(context *gin.Context) {
 		if userId, exists := context.Params.Get("user-id"); exists {
 			user.Id = userId
 			if err := upsertUser(&user); err == nil {
-				context.JSON(http.StatusOK, gin.H{})
+				context.JSON(http.StatusOK, gin.H{"data": user})
 			} else {
 				context.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			}

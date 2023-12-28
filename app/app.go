@@ -1,6 +1,7 @@
 package app
 
 import (
+	"github.com/colinjlacy/jetbrains-ai-test-drive/endpoints"
 	"github.com/gin-gonic/gin"
 	"net/http"
 )
@@ -9,6 +10,7 @@ func Start() {
 	r := gin.Default()
 
 	registerHealthEndpoint(r)
+	endpoints.RegisterUserEndpoints(r) // <- right here
 
 	r.GET("/", func(c *gin.Context) {
 		c.JSON(200, gin.H{
